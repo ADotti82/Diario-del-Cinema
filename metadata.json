@@ -1,0 +1,6 @@
+{
+  "name": "CineDiario - Diario Cinematografico",
+  "description": "Diario cinematografico personale con integrazione TMDB, salvataggio su Google Sheets (Google Apps Script), supporto PWA e funzionamento offline.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
