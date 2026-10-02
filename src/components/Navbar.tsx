@@ -3,12 +3,16 @@ import { Film, Compass, BarChart3, Settings, Download, WifiOff, Sparkles, Smartp
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
+import { User } from 'firebase/auth';
+
 interface NavbarProps {
   activeTab: 'diary' | 'search' | 'stats' | 'setup';
   setActiveTab: (tab: 'diary' | 'search' | 'stats' | 'setup') => void;
   diaryCount: number;
   onOpenSettings: () => void;
   onOpenInstallGuide: () => void;
+  user: User | null;
+  onOpenAuthModal: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -16,7 +20,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   diaryCount,
   onOpenSettings,
-  onOpenInstallGuide
+  onOpenInstallGuide,
+  user,
+  onOpenAuthModal
 }) => {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const isOnline = useOnlineStatus();
@@ -136,6 +142,44 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <Download className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span>Installa</span>
+              </button>
+            )}
+
+            {/* Google Profile or Sign-In button */}
+            {user ? (
+              <button
+                onClick={onOpenSettings}
+                className="flex items-center gap-1.5 p-1 sm:px-2.5 sm:py-1 rounded-xl bg-slate-900 hover:bg-slate-800 border border-emerald-500/40 text-xs text-slate-200 transition-colors"
+                title={`Collegato con Google: ${user.displayName || user.email}`}
+              >
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt="Google Avatar"
+                    className="w-6 h-6 rounded-full object-cover border border-emerald-400"
+                  />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 font-bold flex items-center justify-center text-[10px]">
+                    G
+                  </div>
+                )}
+                <span className="hidden lg:inline text-xs font-medium text-emerald-300 truncate max-w-[90px]">
+                  {user.displayName?.split(' ')[0] || 'Google'}
+                </span>
+              </button>
+            ) : (
+              <button
+                onClick={onOpenAuthModal}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold hover:border-amber-500/50 transition-colors"
+                title="Collega Profilo Google (Crea Foglio Automatico)"
+              >
+                <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24">
+                  <path fill="#EA4335" d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z" />
+                  <path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z" />
+                  <path fill="#FBBC05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15s.7 5.3 1.9 7.7l3.7-2.9z" />
+                  <path fill="#34A853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2-6.4-4.8L1.9 16.4C3.7 20.4 7.5 23 12 23z" />
+                </svg>
+                <span className="hidden sm:inline">Accedi Google</span>
               </button>
             )}
 

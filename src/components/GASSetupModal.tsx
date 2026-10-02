@@ -4,18 +4,37 @@ import { AppSettings } from '../types';
 import { testGASConnection } from '../services/gasService';
 import { DEFAULT_TMDB_API_KEY } from '../services/storage';
 
+import { User } from 'firebase/auth';
+import { GoogleAccountCard } from './GoogleAccountCard';
+
 interface GASSetupModalProps {
   settings: AppSettings;
   onSaveSettings: (settings: AppSettings) => void;
   onClose?: () => void;
   isStandaloneTab?: boolean;
+  user?: User | null;
+  spreadsheetId?: string | null;
+  spreadsheetUrl?: string | null;
+  isSyncing?: boolean;
+  onSignInGoogle?: () => void;
+  onSignOutGoogle?: () => void;
+  onSyncGoogle?: () => void;
+  entriesCount?: number;
 }
 
 export const GASSetupModal: React.FC<GASSetupModalProps> = ({
   settings,
   onSaveSettings,
   onClose,
-  isStandaloneTab = false
+  isStandaloneTab = false,
+  user = null,
+  spreadsheetId = null,
+  spreadsheetUrl = null,
+  isSyncing = false,
+  onSignInGoogle = () => {},
+  onSignOutGoogle = () => {},
+  onSyncGoogle = () => {},
+  entriesCount = 0
 }) => {
   const [gasUrl, setGasUrl] = useState(settings.gasWebAppUrl);
   const [tmdbKey, setTmdbKey] = useState(settings.tmdbApiKey || DEFAULT_TMDB_API_KEY);
@@ -215,6 +234,18 @@ function createJsonResponse(data) {
           <span>Impostazioni salvate con successo!</span>
         </div>
       )}
+
+      {/* Google Account & Automatic Sheet Card */}
+      <GoogleAccountCard
+        user={user}
+        spreadsheetId={spreadsheetId}
+        spreadsheetUrl={spreadsheetUrl}
+        isSyncing={isSyncing}
+        onSignIn={onSignInGoogle}
+        onSignOut={onSignOutGoogle}
+        onSync={onSyncGoogle}
+        entriesCount={entriesCount}
+      />
 
       {/* Main Settings Form */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
