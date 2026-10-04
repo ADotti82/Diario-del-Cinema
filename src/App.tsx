@@ -54,6 +54,7 @@ export default function App() {
   const [isIOSGuideOpen, setIsIOSGuideOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
   const [isUnauthorizedDomainOpen, setIsUnauthorizedDomainOpen] = useState<boolean>(false);
+  const [oauthErrorType, setOauthErrorType] = useState<'origin_mismatch' | 'unauthorized-domain' | null>('origin_mismatch');
 
   // Toast notification
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; actionUrl?: string; actionLabel?: string } | null>(null);
@@ -184,9 +185,20 @@ export default function App() {
     } catch (err: any) {
       console.error('Google sign-in / sheet creation error:', err);
       if (
+        err?.code === 'origin_mismatch' ||
+        err?.message?.includes('origin_mismatch')
+      ) {
+        setOauthErrorType('origin_mismatch');
+        setIsOnboardingOpen(false);
+        setIsSettingsModalOpen(false);
+        setIsUnauthorizedDomainOpen(true);
+        return;
+      }
+      if (
         err?.code === 'auth/unauthorized-domain' ||
         err?.message?.includes('unauthorized-domain')
       ) {
+        setOauthErrorType('unauthorized-domain');
         setIsOnboardingOpen(false);
         setIsSettingsModalOpen(false);
         setIsUnauthorizedDomainOpen(true);
@@ -455,7 +467,7 @@ export default function App() {
         onClose={() => setIsIOSGuideOpen(false)}
       />
 
-      {/* Modal: Autorizzazione Dominio Firebase Richiesta (auth/unauthorized-domain) */}
+      {/* Modal: Assistente Risoluzione Dominio OAuth / GAS (origin_mismatch / unauthorized-domain) */}
       <UnauthorizedDomainModal
         isOpen={isUnauthorizedDomainOpen}
         onClose={() => setIsUnauthorizedDomainOpen(false)}
@@ -467,6 +479,11 @@ export default function App() {
           setIsUnauthorizedDomainOpen(false);
           handleContinueLocal();
         }}
+        onOpenGASSetup={() => {
+          setIsUnauthorizedDomainOpen(false);
+          setActiveTab('setup');
+        }}
+        errorType={oauthErrorType}
       />
 
       {/* Global Toast Notification with Optional Google Sheet Direct Link */}

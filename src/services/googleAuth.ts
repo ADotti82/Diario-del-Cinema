@@ -92,7 +92,16 @@ function signInWithGIS(): Promise<{ user: AppGoogleUser; accessToken: string }> 
         scope: `${SCOPES.join(' ')} https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email`,
         callback: async (tokenResponse: any) => {
           if (tokenResponse.error) {
-            reject(new Error(tokenResponse.error_description || tokenResponse.error));
+            const isMismatch =
+              tokenResponse.error === 'origin_mismatch' ||
+              tokenResponse.error_description?.includes('origin_mismatch');
+            const err: any = new Error(
+              isMismatch
+                ? 'Errore 400: origin_mismatch - Registra l\'origine JavaScript in Google Cloud Console'
+                : tokenResponse.error_description || tokenResponse.error
+            );
+            err.code = isMismatch ? 'origin_mismatch' : tokenResponse.error;
+            reject(err);
             return;
           }
 
@@ -131,12 +140,34 @@ function signInWithGIS(): Promise<{ user: AppGoogleUser; accessToken: string }> 
           });
         },
         error_callback: (err: any) => {
-          reject(err);
+          const isMismatch =
+            err?.type === 'origin_mismatch' ||
+            err?.message?.includes('origin_mismatch') ||
+            String(err).includes('origin_mismatch');
+          const customErr: any = new Error(
+            isMismatch
+              ? 'Errore 400: origin_mismatch - Registra l\'origine JavaScript in Google Cloud Console'
+              : err?.message || 'Errore OAuth'
+          );
+          customErr.code = isMismatch ? 'origin_mismatch' : 'oauth_error';
+          reject(customErr);
         }
       });
 
       client.requestAccessToken({ prompt: 'select_account' });
-    } catch (e) {
+    } catch (e: any) {
+      const isMismatch =
+        e?.type === 'origin_mismatch' ||
+        e?.message?.includes('origin_mismatch') ||
+        String(e).includes('origin_mismatch');
+      if (isMismatch) {
+        const customErr: any = new Error(
+          'Errore 400: origin_mismatch - Registra l\'origine JavaScript in Google Cloud Console'
+        );
+        customErr.code = 'origin_mismatch';
+        reject(customErr);
+        return;
+      }
       reject(e);
     }
   });
@@ -179,6 +210,12 @@ export const googleSignIn = async (): Promise<{ user: AppGoogleUser; accessToken
           return await signInWithGIS();
         } catch (gisErr: any) {
           console.warn('Fallback GIS non riuscito o bloccato:', gisErr);
+          if (
+            gisErr?.code === 'origin_mismatch' ||
+            gisErr?.message?.includes('origin_mismatch')
+          ) {
+            throw gisErr;
+          }
           // Re-throw with specific unauthorized-domain code for the UI modal
           const error: any = new Error(
             `Il dominio ${window.location.hostname} non è ancora autorizzato nella console Firebase.`
