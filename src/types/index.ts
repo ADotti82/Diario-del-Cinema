@@ -25,6 +25,8 @@ export interface DiaryEntry {
   original_title?: string;
   release_year?: string;
   overview?: string;
+  genres?: string[];
+  genre_ids?: number[];
 }
 
 export interface AppSettings {

@@ -251,3 +251,37 @@ export async function getMovieDetails(id: number | string, apiKey: string): Prom
     return FALLBACK_MOVIES.find((m) => String(m.id) === String(id)) || null;
   }
 }
+
+/**
+ * Official TMDB Genre Mapping in Italian
+ */
+export const TMDB_GENRES_MAP: Record<number, string> = {
+  28: 'Azione',
+  12: 'Avventura',
+  16: 'Animazione',
+  35: 'Commedia',
+  80: 'Crime',
+  99: 'Documentario',
+  18: 'Dramma',
+  10751: 'Famiglia',
+  14: 'Fantasy',
+  36: 'Storia',
+  27: 'Horror',
+  10402: 'Musica',
+  9648: 'Mistero',
+  10749: 'Romance',
+  878: 'Fantascienza',
+  10770: 'Film TV',
+  53: 'Thriller',
+  10752: 'Guerra',
+  37: 'Western'
+};
+
+/**
+ * Convert numeric TMDB genre IDs to human-readable Italian genre names
+ */
+export function getGenreNamesFromIds(ids?: number[]): string[] {
+  if (!ids || !Array.isArray(ids)) return [];
+  return ids.map((id) => TMDB_GENRES_MAP[id]).filter(Boolean);
+}
+

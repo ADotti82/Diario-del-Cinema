@@ -4,7 +4,7 @@ import { AppSettings } from '../types';
 import { testGASConnection } from '../services/gasService';
 import { DEFAULT_TMDB_API_KEY } from '../services/storage';
 
-import { User } from 'firebase/auth';
+import { AppGoogleUser } from '../services/googleAuth';
 import { GoogleAccountCard } from './GoogleAccountCard';
 
 interface GASSetupModalProps {
@@ -12,7 +12,7 @@ interface GASSetupModalProps {
   onSaveSettings: (settings: AppSettings) => void;
   onClose?: () => void;
   isStandaloneTab?: boolean;
-  user?: User | null;
+  user?: AppGoogleUser | null;
   spreadsheetId?: string | null;
   spreadsheetUrl?: string | null;
   isSyncing?: boolean;

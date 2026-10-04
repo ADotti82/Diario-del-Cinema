@@ -16,7 +16,8 @@ import { GASSetupModal } from './components/GASSetupModal';
 import { TMDBMovie, DiaryEntry, AppSettings } from './types';
 import { getStoredSettings, setStoredSettings, getStoredEntries, setStoredEntries } from './services/storage';
 import { fetchDiaryEntriesFromGAS, saveDiaryEntryToGAS, deleteDiaryEntryGAS } from './services/gasService';
-import { initAuth, googleSignIn, googleSignOut, getAccessToken } from './services/googleAuth';
+import { initAuth, googleSignIn, googleSignOut, getAccessToken, AppGoogleUser } from './services/googleAuth';
+import { UnauthorizedDomainModal } from './components/UnauthorizedDomainModal';
 import {
   findOrCreateGoogleSpreadsheet,
   fetchEntriesFromGoogleSheet,
@@ -26,7 +27,6 @@ import {
   getStoredSpreadsheetId,
   setStoredSpreadsheetId
 } from './services/googleSheetsService';
-import { User } from 'firebase/auth';
 import { CheckCircle2, AlertCircle, Film, Sparkles, X, FileSpreadsheet } from 'lucide-react';
 
 export default function App() {
@@ -36,7 +36,7 @@ export default function App() {
   const [loadingEntries, setLoadingEntries] = useState<boolean>(false);
 
   // Google Authentication & Google Sheets State
-  const [googleUser, setGoogleUser] = useState<User | null>(null);
+  const [googleUser, setGoogleUser] = useState<AppGoogleUser | null>(null);
   const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
   const [spreadsheetId, setSpreadsheetId] = useState<string | null>(getStoredSpreadsheetId);
   const [spreadsheetUrl, setSpreadsheetUrl] = useState<string | null>(() => {
@@ -53,6 +53,7 @@ export default function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isIOSGuideOpen, setIsIOSGuideOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
+  const [isUnauthorizedDomainOpen, setIsUnauthorizedDomainOpen] = useState<boolean>(false);
 
   // Toast notification
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; actionUrl?: string; actionLabel?: string } | null>(null);
@@ -182,8 +183,16 @@ export default function App() {
       );
     } catch (err: any) {
       console.error('Google sign-in / sheet creation error:', err);
+      if (
+        err?.code === 'auth/unauthorized-domain' ||
+        err?.message?.includes('unauthorized-domain')
+      ) {
+        setIsOnboardingOpen(false);
+        setIsSettingsModalOpen(false);
+        setIsUnauthorizedDomainOpen(true);
+        return;
+      }
       showToast(err?.message || 'Errore durante la connessione con Google', 'error');
-      throw err;
     } finally {
       setIsCreatingSheet(false);
     }
@@ -444,6 +453,20 @@ export default function App() {
       <PWAInstallModal
         isOpen={isIOSGuideOpen}
         onClose={() => setIsIOSGuideOpen(false)}
+      />
+
+      {/* Modal: Autorizzazione Dominio Firebase Richiesta (auth/unauthorized-domain) */}
+      <UnauthorizedDomainModal
+        isOpen={isUnauthorizedDomainOpen}
+        onClose={() => setIsUnauthorizedDomainOpen(false)}
+        onRetry={() => {
+          setIsUnauthorizedDomainOpen(false);
+          handleGoogleSignIn();
+        }}
+        onContinueLocal={() => {
+          setIsUnauthorizedDomainOpen(false);
+          handleContinueLocal();
+        }}
       />
 
       {/* Global Toast Notification with Optional Google Sheet Direct Link */}

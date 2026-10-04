@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Calendar, MapPin, Star, MessageSquare, Save, Loader2, Sparkles, Film, CheckCircle2, AlertCircle } from 'lucide-react';
 import { TMDBMovie, DiaryEntry } from '../types';
 import { MoviePoster } from './MoviePoster';
+import { getGenreNamesFromIds } from '../services/tmdb';
 
 interface MovieEntryModalProps {
   movie: TMDBMovie | null;
@@ -92,6 +93,8 @@ export const MovieEntryModal: React.FC<MovieEntryModalProps> = ({
     setIsSaving(true);
     setSaveStatus(null);
 
+    const genreNames = movie.genre_ids ? getGenreNamesFromIds(movie.genre_ids) : (existingEntry?.genres || []);
+
     const entryToSave: DiaryEntry = {
       id: String(movie.id),
       title: movie.title,
@@ -103,7 +106,9 @@ export const MovieEntryModal: React.FC<MovieEntryModalProps> = ({
       timestamp: existingEntry?.timestamp || new Date().toISOString(),
       original_title: movie.original_title,
       release_year: releaseYear,
-      overview: movie.overview
+      overview: movie.overview,
+      genres: genreNames,
+      genre_ids: movie.genre_ids || existingEntry?.genre_ids
     };
 
     try {

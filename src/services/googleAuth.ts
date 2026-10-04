@@ -1,6 +1,6 @@
 /**
  * Google Workspace & Firebase Authentication Service
- * Manages client-side OAuth tokens with in-memory caching
+ * Manages client-side OAuth tokens with in-memory caching and fallback to Google Identity Services
  */
 
 import { initializeApp } from 'firebase/app';
@@ -17,6 +17,14 @@ import firebaseConfig from '../../firebase-applet-config.json';
 // Initialize Firebase App
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+
+// Unified user profile compatible with Firebase User and Google OAuth UserInfo
+export interface AppGoogleUser {
+  uid: string;
+  displayName: string | null;
+  email: string | null;
+  photoURL: string | null;
+}
 
 // Configure Google Provider with required Workspace scopes
 export const googleProvider = new GoogleAuthProvider();
@@ -40,16 +48,24 @@ let isSigningIn = false;
  * Initialize auth listener. Called on app load.
  */
 export const initAuth = (
-  onAuthSuccess?: (user: User, token: string) => void,
+  onAuthSuccess?: (user: AppGoogleUser, token: string) => void,
   onAuthFailure?: () => void
 ) => {
   return onAuthStateChanged(auth, async (user: User | null) => {
     if (user) {
       if (cachedAccessToken) {
-        if (onAuthSuccess) onAuthSuccess(user, cachedAccessToken);
+        if (onAuthSuccess) {
+          onAuthSuccess(
+            {
+              uid: user.uid,
+              displayName: user.displayName,
+              email: user.email,
+              photoURL: user.photoURL
+            },
+            cachedAccessToken
+          );
+        }
       } else if (!isSigningIn) {
-        // If user is logged in to Firebase but in-memory token is absent (e.g. page refresh),
-        // we can prompt for sign-in or keep user state while asking to re-authenticate on action
         if (onAuthFailure) onAuthFailure();
       }
     } else {
@@ -60,23 +76,120 @@ export const initAuth = (
 };
 
 /**
- * Sign in with Google Popup and obtain access token for Drive & Sheets
+ * Attempt sign-in with Google Identity Services (GIS) token client as fallback
  */
-export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
-  try {
-    isSigningIn = true;
-    const result = await signInWithPopup(auth, googleProvider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-
-    if (!credential?.accessToken) {
-      throw new Error('Impossibile ottenere il token di accesso Google.');
+function signInWithGIS(): Promise<{ user: AppGoogleUser; accessToken: string }> {
+  return new Promise((resolve, reject) => {
+    const googleObj = (window as any).google;
+    if (!googleObj?.accounts?.oauth2) {
+      reject(new Error('Google Identity Services non caricato'));
+      return;
     }
 
-    cachedAccessToken = credential.accessToken;
-    return { user: result.user, accessToken: cachedAccessToken };
-  } catch (error: any) {
-    console.error('Errore durante il login Google:', error);
-    throw error;
+    try {
+      const client = googleObj.accounts.oauth2.initTokenClient({
+        client_id: firebaseConfig.oAuthClientId,
+        scope: `${SCOPES.join(' ')} https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email`,
+        callback: async (tokenResponse: any) => {
+          if (tokenResponse.error) {
+            reject(new Error(tokenResponse.error_description || tokenResponse.error));
+            return;
+          }
+
+          const accessToken = tokenResponse.access_token;
+          cachedAccessToken = accessToken;
+
+          try {
+            // Fetch user info from Google endpoint
+            const infoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: { Authorization: `Bearer ${accessToken}` }
+            });
+
+            if (infoRes.ok) {
+              const profile = await infoRes.json();
+              const appUser: AppGoogleUser = {
+                uid: profile.sub || String(Date.now()),
+                displayName: profile.name || profile.given_name || 'Utente Google',
+                email: profile.email || '',
+                photoURL: profile.picture || null
+              };
+              resolve({ user: appUser, accessToken });
+              return;
+            }
+          } catch {
+            // Fallback user if profile fetch failed
+          }
+
+          resolve({
+            user: {
+              uid: String(Date.now()),
+              displayName: 'Utente Google',
+              email: null,
+              photoURL: null
+            },
+            accessToken
+          });
+        },
+        error_callback: (err: any) => {
+          reject(err);
+        }
+      });
+
+      client.requestAccessToken({ prompt: 'select_account' });
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+/**
+ * Sign in with Google Popup and obtain access token for Drive & Sheets
+ */
+export const googleSignIn = async (): Promise<{ user: AppGoogleUser; accessToken: string } | null> => {
+  try {
+    isSigningIn = true;
+
+    // 1. Try Firebase Auth popup
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+
+      if (!credential?.accessToken) {
+        throw new Error('Impossibile ottenere il token di accesso Google.');
+      }
+
+      cachedAccessToken = credential.accessToken;
+      return {
+        user: {
+          uid: result.user.uid,
+          displayName: result.user.displayName,
+          email: result.user.email,
+          photoURL: result.user.photoURL
+        },
+        accessToken: cachedAccessToken
+      };
+    } catch (firebaseErr: any) {
+      // If domain is not authorized in Firebase Auth, attempt Google Identity Services (GIS)
+      if (
+        firebaseErr?.code === 'auth/unauthorized-domain' ||
+        firebaseErr?.message?.includes('unauthorized-domain')
+      ) {
+        console.warn('Firebase auth/unauthorized-domain rilevato. Tentativo con Google Identity Services...');
+        try {
+          return await signInWithGIS();
+        } catch (gisErr: any) {
+          console.warn('Fallback GIS non riuscito o bloccato:', gisErr);
+          // Re-throw with specific unauthorized-domain code for the UI modal
+          const error: any = new Error(
+            `Il dominio ${window.location.hostname} non è ancora autorizzato nella console Firebase.`
+          );
+          error.code = 'auth/unauthorized-domain';
+          error.domain = window.location.hostname;
+          throw error;
+        }
+      }
+      throw firebaseErr;
+    }
   } finally {
     isSigningIn = false;
   }

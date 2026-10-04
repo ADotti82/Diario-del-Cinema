@@ -3,7 +3,7 @@ import { Film, Compass, BarChart3, Settings, Download, WifiOff, Sparkles, Smartp
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
-import { User } from 'firebase/auth';
+import { AppGoogleUser } from '../services/googleAuth';
 
 interface NavbarProps {
   activeTab: 'diary' | 'search' | 'stats' | 'setup';
@@ -11,7 +11,7 @@ interface NavbarProps {
   diaryCount: number;
   onOpenSettings: () => void;
   onOpenInstallGuide: () => void;
-  user: User | null;
+  user: AppGoogleUser | null;
   onOpenAuthModal: () => void;
 }
 

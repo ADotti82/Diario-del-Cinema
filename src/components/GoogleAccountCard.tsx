@@ -1,10 +1,10 @@
 import React from 'react';
-import { User } from 'firebase/auth';
+import { AppGoogleUser } from '../services/googleAuth';
 import { ExternalLink, RefreshCw, LogOut, CheckCircle2, FileSpreadsheet, HardDrive, Sparkles } from 'lucide-react';
 import { GoogleSignInButton } from './GoogleSignInButton';
 
 interface GoogleAccountCardProps {
-  user: User | null;
+  user: AppGoogleUser | null;
   spreadsheetId: string | null;
   spreadsheetUrl: string | null;
   isSyncing: boolean;
