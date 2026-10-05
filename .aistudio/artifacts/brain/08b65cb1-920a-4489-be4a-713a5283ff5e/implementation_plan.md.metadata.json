@@ -1,0 +1,6 @@
+{
+  "summary":  "Piano dettagliato per passare a Google Apps Script (GAS) come backend cloud primario, eliminando i blocchi OAuth 2.0 (Errore 400: origin_mismatch) e predisponendo la connessione automatica allo script.",
+  "updatedAt":  "2026-10-05T20:06:38.431571310Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}

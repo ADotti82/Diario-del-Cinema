@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Settings, Copy, Check, ExternalLink, ShieldCheck, CheckCircle2, AlertCircle, RefreshCw, Key, Database, Globe, Rocket, HelpCircle } from 'lucide-react';
 import { AppSettings } from '../types';
-import { testGASConnection } from '../services/gasService';
+import { testGASConnection, CODE_GS_TEMPLATE } from '../services/gasService';
 import { DEFAULT_TMDB_API_KEY } from '../services/storage';
 
 import { AppGoogleUser } from '../services/googleAuth';
@@ -175,7 +175,7 @@ function createJsonResponse(data) {
 
   const handleCopyCode = async () => {
     try {
-      await navigator.clipboard.writeText(codeGsSource);
+      await navigator.clipboard.writeText(CODE_GS_TEMPLATE);
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 2500);
     } catch (e) {
