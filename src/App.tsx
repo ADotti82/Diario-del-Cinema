@@ -31,6 +31,9 @@ export default function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isIOSGuideOpen, setIsIOSGuideOpen] = useState(false);
   const [isGASAutoConnectOpen, setIsGASAutoConnectOpen] = useState<boolean>(false);
+  const [bannerDismissed, setBannerDismissed] = useState<boolean>(() => {
+    return localStorage.getItem('cinediario_gas_banner_dismissed') === 'true';
+  });
 
   // Toast notification
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; actionUrl?: string; actionLabel?: string } | null>(null);
@@ -46,14 +49,6 @@ export default function App() {
       setToast((cur) => (cur?.message === message ? null : cur));
     }, 5000);
   };
-
-  // Check GAS connection assistant on initial mount
-  useEffect(() => {
-    const gasDismissed = localStorage.getItem('cinediario_gas_onboarding_dismissed');
-    if (!settings.gasWebAppUrl && gasDismissed !== 'true') {
-      setIsGASAutoConnectOpen(true);
-    }
-  }, [settings.gasWebAppUrl]);
 
   // Load diary entries (from GAS if configured, else from local storage)
   const loadEntries = useCallback(async () => {
@@ -193,6 +188,45 @@ export default function App() {
 
       {/* Main Content View Switcher */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Non-blocking Google Sheets helper banner */}
+        {!isGasConnected && !bannerDismissed && (
+          <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-slate-900 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg animate-fadeIn">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center flex-shrink-0">
+                <FileSpreadsheet className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-xs sm:text-sm font-bold text-white">
+                  Salva e sincronizza i tuoi film su Google Sheets
+                </h4>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Nessun account di terze parti: backup cloud personale in 1 minuto con Google Apps Script, oppure continua in locale!
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
+              <button
+                onClick={() => setIsGASAutoConnectOpen(true)}
+                className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md transition-colors cursor-pointer"
+              >
+                Collega Foglio
+              </button>
+              <button
+                onClick={() => {
+                  setBannerDismissed(true);
+                  try {
+                    localStorage.setItem('cinediario_gas_banner_dismissed', 'true');
+                  } catch {}
+                }}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                title="Nascondi avviso"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'diary' && (
           <DiaryHistory
             entries={entries}
